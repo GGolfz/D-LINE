@@ -1,13 +1,28 @@
 import time
 from threading import Timer
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 class Process:
     def __init__(self,pid):
         self.pid = pid
         self.vector_time = {}
         self.buffer_list = []
-        self.messages = []
         self.lock_buffer = False
         self.address = {pid:self}
+        if pid == 1:
+            self.color = bcolors.OKBLUE
+        elif pid == 2:
+            self.color = bcolors.OKCYAN
+        elif pid == 3:
+            self.color = bcolors.OKGREEN
     def connect(self,peer):
         print(str(self.pid) + " and " + str(peer.pid) + " are connected at time " + time.ctime() )
         self.address[peer.pid]=peer
@@ -18,16 +33,23 @@ class Process:
         if type == 'text':
             # text use 1s to sent
             self.send_message_by_type(target,1,type,content)
+            if self.pid == 2 and target.pid == 1:
+                self.send_message_by_type(self.address[3],1,type,content)
         elif type == 'image':
             # image use 3s to sent
             self.send_message_by_type(target,3,type,content)
+            if self.pid == 2 and target.pid == 1:
+                self.send_message_by_type(self.address[3],3,type,content)
         elif type == 'video':
             # video use 5s to sent
             self.send_message_by_type(target,5,type,content)
+            if self.pid == 2 and target.pid == 1:
+                self.send_message_by_type(self.address[3],5,type,content)
     def send_message_by_type(self,target,delay,type,content):
         self.vector_time[target.pid][self.pid] += 1
-        print(str(self.pid) + " send the "+type+" message to "+ str(target.pid) + " at time "+ time.ctime())
-        Timer(delay,target.receive_message,[{'pid':self.pid,'content':content,'vector_time':self.vector_time[target.pid].copy(),'type': type}]).start()
+        print(self.color + str(self.pid) + " send the "+type+" message to "+ str(target.pid) + " at time "+ time.ctime() + '(sequence = '+ str(self.vector_time[target.pid][self.pid]) +')' + bcolors.ENDC)
+        message = {'pid':self.pid,'content':content,'vector_time':self.vector_time[target.pid].copy(),'type': type}
+        Timer(delay,target.receive_message,[message]).start()
     def receive_message(self,message):
         vector_temp = self.vector_time[message['pid']].copy()
         vector_temp[message['pid']] += 1
@@ -45,9 +67,7 @@ class Process:
                     self.buffer_list.append(message)
                     return False
         self.vector_time[message['pid']] = vector_temp
-        print(str(self.pid) + " receive the "+ message['type'] + " message from " + str(message['pid'])+ " : " + message['content'] + " at time "+ time.ctime())
-        # Store the message
-        self.messages.append(message['content'])
+        print(self.color + str(self.pid) + " receive the "+ message['type'] + " message from " + str(message['pid'])+ " : " + message['content'] + " at time "+ time.ctime() +  '(sequence = '+ str(self.vector_time[message['pid']][message['pid']])  +')' + bcolors.ENDC)
         # If process 2 then forward to process 3
         if self.pid == 2:
             self.send_message(self.address[3],message['type'],message['content'])
@@ -72,6 +92,7 @@ def main():
     p1.send_message(p2,'image','image 2')
     p1.send_message(p2,'text','text 2')
     p1.send_message(p2,'video','video 2')
+    p2.send_message(p1,'video','video 1 from p2')
     p1.send_message(p2,'video','video 3')
     p1.send_message(p2,'text','text 3')
     p1.send_message(p2,'text','text 4')
@@ -80,11 +101,8 @@ def main():
     p1.send_message(p2,'text','text 6')
     p1.send_message(p2,'video','video 4')
     time.sleep(20)
-    print(p1.messages)
     print(p1.buffer_list)
-    print(p2.messages)
     print(p2.buffer_list)
-    print(p3.messages)
     print(p3.buffer_list)
 if __name__ == '__main__':  
     main()
