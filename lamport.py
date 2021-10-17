@@ -16,12 +16,14 @@ class Process:
         peer.vector_time[self.pid] = {self.pid: 0, peer.pid: 0}
     def send_message(self,target,type,content):
         if type == 'text':
+            # text use 1s to sent
             self.send_message_by_type(target,1,type,content)
         elif type == 'image':
+            # image use 3s to sent
             self.send_message_by_type(target,3,type,content)
         elif type == 'video':
+            # video use 5s to sent
             self.send_message_by_type(target,5,type,content)
-        time.sleep(0.5)
     def send_message_by_type(self,target,delay,type,content):
         self.vector_time[target.pid][self.pid] += 1
         print(str(self.pid) + " send the "+type+" message to "+ str(target.pid) + " at time "+ time.ctime())
@@ -30,20 +32,26 @@ class Process:
         vector_temp = self.vector_time[message['pid']].copy()
         vector_temp[message['pid']] += 1
         if vector_temp[message['pid']] != message['vector_time'][message['pid']]:
-            # print("PUT HERE 1",self.pid, self.buffer_list,message)
-            self.buffer_list.append(message)
+             # Push message that cannot receive now in to buffer list (Check 1 of causal ordering)
+            if vector_temp[message['pid']] < message['vector_time'][message['pid']]:
+                # print("PUT HERE 1",self.pid, self.buffer_list,message)
+                self.buffer_list.append(message)
             return False
         for i in vector_temp.keys():
             if i != message['pid']:
+                # Push message that cannot receive now in to buffer list (Check 2 of causal ordering)
                 if message['vector_time'][i] > vector_temp[i]:
                     # print("PUT HERE 2",self.pid, self.buffer_list,message)
                     self.buffer_list.append(message)
                     return False
         self.vector_time[message['pid']] = vector_temp
         print(str(self.pid) + " receive the "+ message['type'] + " message from " + str(message['pid'])+ " : " + message['content'] + " at time "+ time.ctime())
+        # Store the message
         self.messages.append(message['content'])
+        # If process 2 then forward to process 3
         if self.pid == 2:
             self.send_message(self.address[3],message['type'],message['content'])
+        # Check message in buffer list
         if len(self.buffer_list) > 0:
             self.check_buffer_list(len(self.buffer_list))
         return True
@@ -71,12 +79,12 @@ def main():
     p1.send_message(p2,'text','text 5')
     p1.send_message(p2,'text','text 6')
     p1.send_message(p2,'video','video 4')
-    # time.sleep(20)
-    # print(p1.messages)
-    # print(p1.buffer_list)
-    # print(p2.messages)
-    # print(p2.buffer_list)
-    # print(p3.messages)
-    # print(p3.buffer_list)
+    time.sleep(20)
+    print(p1.messages)
+    print(p1.buffer_list)
+    print(p2.messages)
+    print(p2.buffer_list)
+    print(p3.messages)
+    print(p3.buffer_list)
 if __name__ == '__main__':  
     main()
