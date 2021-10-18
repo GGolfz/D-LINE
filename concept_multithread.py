@@ -19,7 +19,7 @@ def get_send_log(color,source,target,vector_time,content,type):
 def get_receive_log(color,source,vector_time,message):
     return color + datetime.now().strftime("%H:%M:%S") + " | " + str(source) + " receive " + message['type'] + " message (" + message['content'] + ") from " + str(message['pid']) + " (sequence time = " + str(vector_time) + ")" + bcolors.ENDC + '\n'
 
-def send_message(pipe,pid,target,vector_time,type,content,color,socket,pid_list):
+def send_message(pipe,pid,target,vector_time,type,content,color,socket,pid_list,delay=0):
     vector_time[0] += 1
     log = get_send_log(color,pid,pid_list[target-1],vector_time[0],content,type)
     print(log,end='')
@@ -32,6 +32,7 @@ def send_message(pipe,pid,target,vector_time,type,content,color,socket,pid_list)
     elif type == 'video':
         sec = 5
     Timer(sec,pipe.send,[{'pid':pid,'content':content,'vector_time':vector_time.copy(),'type': type}]).start()
+    time.sleep(delay)
     return vector_time
 
 def receive_message(pipe,pid,vector_time,buffer_list,color,socket,pid_list,is_process2=False,pipe23=None):
@@ -88,7 +89,7 @@ def process_one(msg_list,pipe12,color,socket,pid_list):
     vector_time = [0,0]
     buffer_list = []
     for i in msg_list:
-        vector_time = send_message(pipe12,pid,2,vector_time,i[0],i[1],color,socket,pid_list)
+        vector_time = send_message(pipe12,pid,2,vector_time,i[0],i[1],color,socket,pid_list,i[2])
 
 def process_two(msg_list,pipe21,pipe23,color,socket,pid_list):
     pid = getpid()
@@ -107,17 +108,20 @@ def process_three(msg_list,pipe32,color,socket,pid_list):
 def main():
     port_list = [5001,5002,5003]
     for i in range(len(port_list)):
-        port_list[i] = int(input("Please Specify PORT for process#"+str(i+1)+" (default: "+str(port_list[i])+"): "))
+        port_list[i] = int(input("Please Specify PORT for process#"+str(i+1)+": "))
+    
     type = 1
     msg_list = []
+    ts = time.time()
     while(type != "0"):
         type = input("Choose Message Type (text,image,video) or 0 for end: ")
         if type == '0':
             break
         message = input("Input Message Name: ")
-        msg_list.append((type,message))
+        te = time.time()
+        ts = te
+        msg_list.append((type,message,te-ts))
 
-    msg_list = [('text','text 1'),('video','video 1'),('image','image 1'),('text','text 2'),('video','video 2'),('text','text 3')]
     oneandtwo, twoandone = Pipe()
     twoandthree, threeandtwo = Pipe()
     
@@ -137,9 +141,11 @@ def main():
     process1.start()
     process2.start()
     process3.start()
+
     pid_list[0] = process1.pid
     pid_list[1] = process2.pid
     pid_list[2] = process3.pid
+    
     process1.join()
     process2.join()
     process3.join()
