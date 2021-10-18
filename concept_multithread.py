@@ -20,8 +20,8 @@ def get_receive_log(color,source,vector_time,message):
     return color + datetime.now().strftime("%H:%M:%S") + " | " + str(source) + " receive " + message['type'] + " message (" + message['content'] + ") from " + str(message['pid']) + " (sequence time = " + str(vector_time) + ")" + bcolors.ENDC + '\n'
 
 def send_message(pipe,pid,target,vector_time,type,content,color,socket,pid_list,delay=0):
-    vector_time[0] += 1
-    log = get_send_log(color,pid,pid_list[target-1],vector_time[0],content,type)
+    vector_time[pid_list[target - 1]][pid] += 1
+    log = get_send_log(color,pid,pid_list[target-1],vector_time[pid_list[target - 1]][pid],content,type)
     print(log,end='')
     socket.send(log.encode())
     sec = 1
@@ -31,28 +31,27 @@ def send_message(pipe,pid,target,vector_time,type,content,color,socket,pid_list,
         sec = 3
     elif type == 'video':
         sec = 5
-    Timer(sec,pipe.send,[{'pid':pid,'content':content,'vector_time':vector_time.copy(),'type': type}]).start()
+    Timer(sec,pipe.send,[{'pid':pid,'content':content,'vector_time':vector_time[pid_list[target - 1]].copy(),'type': type}]).start()
     time.sleep(delay)
     return vector_time
 
 def receive_message(pipe,pid,vector_time,buffer_list,color,socket,pid_list,is_process2=False,pipe23=None):
     message = pipe.recv()
     vector_temp = vector_time.copy()
-    if is_process2:
-        vector_temp = vector_time[0].copy()
-    vector_temp[1] += 1
-    if vector_temp[1] < message['vector_time'][0]:
+    vector_temp[message['pid']][message['pid']] += 1
+    if vector_temp[message['pid']][message['pid']] < message['vector_time'][message['pid']]:
         buffer_list.append(message)
         return vector_time,buffer_list
-    if vector_temp[0] < message['vector_time'][1]:
-        buffer_list.append(message)
-        return vector_time,buffer_list
-    log = get_receive_log(color,pid,vector_temp[1],message)
+    for i in vector_temp[message['pid']].keys():
+        if i != message['pid']:
+            if vector_temp[message['pid']][i] < message['vector_time'][i]:
+                buffer_list.append(message)
+                return vector_time,buffer_list
+    log = get_receive_log(color,pid,vector_temp[message['pid']][message['pid']],message)
     print(log,end='')
     socket.send(log.encode())
     if is_process2:
-        vector_temp_send = send_message(pipe23,pid,3,vector_time[1].copy(),message['type'],message['content'],color,socket,pid_list)
-        vector_temp = [vector_temp,vector_temp_send]
+        vector_temp = send_message(pipe23,pid,3,vector_temp.copy(),message['type'],message['content'],color,socket,pid_list)
     n = len(buffer_list)
     for _ in range(n):
         if len(buffer_list) == 0:
@@ -62,21 +61,20 @@ def receive_message(pipe,pid,vector_time,buffer_list,color,socket,pid_list,is_pr
 
 def handle_buffer_message(pid,vector_time,buffer_list,message,color,socket,pid_list,is_process2,pipe23):
     vector_temp = vector_time.copy()
-    if is_process2:
-        vector_temp = vector_time[0].copy()
-    vector_temp[1] += 1
-    if vector_temp[1] < message['vector_time'][0]:
+    vector_temp[message['pid']][message['pid']] += 1
+    if vector_temp[message['pid']][message['pid']] < message['vector_time'][message['pid']]:
         buffer_list.append(message)
         return vector_time,buffer_list
-    if vector_temp[0] < message['vector_time'][1]:
-        buffer_list.append(message)
-        return vector_time,buffer_list
-    log = get_receive_log(color,pid,vector_temp[1],message)
+    for i in vector_temp.keys():
+        if i != message['pid']:
+            if vector_temp[message['pid']][i] < message['vector_time'][i]:
+                buffer_list.append(message)
+                return vector_time,buffer_list
+    log = get_receive_log(color,pid,vector_temp[message['pid']][message['pid']],message)
     print(log,end='')
     socket.send(log.encode())
     if is_process2:
-        vector_temp_send = send_message(pipe23,pid,3,vector_time[1].copy(),message['type'],message['content'],color,socket,pid_list)
-        vector_temp = [vector_temp,vector_temp_send]
+        vector_temp = send_message(pipe23,pid,3,vector_temp.copy(),message['type'],message['content'],color,socket,pid_list)
     n = len(buffer_list)
     for _ in range(n):
         if len(buffer_list) == 0:
@@ -86,21 +84,21 @@ def handle_buffer_message(pid,vector_time,buffer_list,message,color,socket,pid_l
 
 def process_one(msg_list,pipe12,color,socket,pid_list):
     pid = getpid()
-    vector_time = [0,0]
+    vector_time = {pid_list[1]:{pid_list[0]:0,pid_list[1]:0}}
     buffer_list = []
     for i in msg_list:
         vector_time = send_message(pipe12,pid,2,vector_time,i[0],i[1],color,socket,pid_list,i[2])
 
 def process_two(msg_list,pipe21,pipe23,color,socket,pid_list):
     pid = getpid()
-    vector_time = [[0,0],[0,0]]
+    vector_time = {pid_list[0]:{pid_list[0]:0,pid_list[1]:0},pid_list[2]:{pid_list[1]:0,pid_list[2]:0}}
     buffer_list = []
     for _ in msg_list:
         vector_time,buffer_list = receive_message(pipe21,pid,vector_time,buffer_list,color,socket,pid_list,True,pipe23)
 
 def process_three(msg_list,pipe32,color,socket,pid_list):
     pid = getpid()
-    vector_time = [0,0]
+    vector_time = {pid_list[1]:{pid_list[1]:0,pid_list[2]:0}}
     buffer_list = []
     for _ in msg_list:
         vector_time,buffer_list = receive_message(pipe32,pid,vector_time,buffer_list,color,socket,pid_list)
