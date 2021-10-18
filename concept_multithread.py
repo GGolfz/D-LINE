@@ -1,15 +1,14 @@
-import time
-from threading import Timer
 from datetime import datetime
 from multiprocessing import Process, Pipe, Array
 from os import getpid
 import socket
+import time
+from threading import Timer
 
 class bcolors:
     OKGREEN = '\033[92m'
     WARNING = '\033[93m'
     OKBLUE = '\033[94m'
-    OKMAGENTA = '\033[95m'
     OKCYAN = '\033[96m'
     ENDC = '\033[0m'
 
@@ -78,6 +77,7 @@ def process_one(msg_list,pipe12,color,socket,pid_list):
             vector_time = send_message(pipe12,pid,2,vector_time,i[0],i[1],color,socket,pid_list,i[3])
         else:
             vector_time,buffer_list = receive_message(pipe12,pid,vector_time,buffer_list,color,socket,pid_list)
+
 def process_two(msg_list,pipe21,pipe23,color,socket,pid_list):
     pid = getpid()
     vector_time = {pid_list[0]:{pid_list[0]:0,pid_list[1]:0},pid_list[2]:{pid_list[1]:0,pid_list[2]:0}}
