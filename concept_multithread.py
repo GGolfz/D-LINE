@@ -37,33 +37,15 @@ def send_message(pipe,pid,target,vector_time,type,content,color,socket,pid_list,
 
 def receive_message(pipe,pid,vector_time,buffer_list,color,socket,pid_list,is_process2=False,pipe23=None):
     message = pipe.recv()
-    vector_temp = vector_time.copy()
-    vector_temp[message['pid']][message['pid']] += 1
-    if vector_temp[message['pid']][message['pid']] < message['vector_time'][message['pid']]:
-        buffer_list.append(message)
-        return vector_time,buffer_list
-    for i in vector_temp[message['pid']].keys():
-        if i != message['pid']:
-            if vector_temp[message['pid']][i] < message['vector_time'][i]:
-                buffer_list.append(message)
-                return vector_time,buffer_list
-    log = get_receive_log(color,pid,vector_temp[message['pid']][message['pid']],message)
-    print(log,end='')
-    socket.send(log.encode())
-    if is_process2:
-        vector_temp = send_message(pipe23,pid,3,vector_temp.copy(),message['type'],message['content'],color,socket,pid_list)
-    n = len(buffer_list)
-    for _ in range(n):
-        if len(buffer_list) == 0:
-            break
-        vector_temp,buffer_list = handle_buffer_message(pid,vector_temp,buffer_list,buffer_list.pop(0),color,socket,pid_list,is_process2,pipe23)
+    vector_temp,buffer_list = handle_receive_message(message,pid,vector_time,buffer_list,color,socket,pid_list,is_process2,pipe23)
     return vector_temp,buffer_list
 
-def handle_buffer_message(pid,vector_time,buffer_list,message,color,socket,pid_list,is_process2,pipe23):
-    vector_temp = vector_time.copy()
+def handle_receive_message(message,pid,vector_time,buffer_list,color,socket,pid_list,is_process2,pipe23):
+    vector_temp = {key:vector_time[key].copy() for key in vector_time.keys()}
     vector_temp[message['pid']][message['pid']] += 1
-    if vector_temp[message['pid']][message['pid']] < message['vector_time'][message['pid']]:
-        buffer_list.append(message)
+    if vector_temp[message['pid']][message['pid']] != message['vector_time'][message['pid']]:
+        if vector_temp[message['pid']][message['pid']] < message['vector_time'][message['pid']]:
+            buffer_list.append(message)
         return vector_time,buffer_list
     for i in vector_temp[message['pid']].keys():
         if i != message['pid']:
@@ -74,12 +56,17 @@ def handle_buffer_message(pid,vector_time,buffer_list,message,color,socket,pid_l
     print(log,end='')
     socket.send(log.encode())
     if is_process2:
-        vector_temp = send_message(pipe23,pid,3,vector_temp.copy(),message['type'],message['content'],color,socket,pid_list)
+        vector_temp = send_message(pipe23,pid,3,vector_temp,message['type'],message['content'],color,socket,pid_list)
+    vector_temp,buffer_list = handle_buffer_message(pid,vector_temp,buffer_list,color,socket,pid_list,is_process2,pipe23)
+    return vector_temp,buffer_list
+
+def handle_buffer_message(pid,vector_time,buffer_list,color,socket,pid_list,is_process2,pipe23):
     n = len(buffer_list)
+    vector_temp = {key:vector_time[key].copy() for key in vector_time.keys()}
     for _ in range(n):
         if len(buffer_list) == 0:
             break
-        vector_temp,buffer_list = handle_buffer_message(pid,vector_temp,buffer_list,buffer_list.pop(0),color,socket,pid_list,is_process2,pipe23)
+        vector_temp,buffer_list = handle_receive_message(buffer_list.pop(0),pid,vector_temp,buffer_list,color,socket,pid_list,is_process2,pipe23)
     return vector_temp,buffer_list
 
 def process_one(msg_list,pipe12,color,socket,pid_list):
@@ -109,11 +96,32 @@ def process_three(msg_list,pipe32,color,socket,pid_list):
     for _ in msg_list:
         vector_time,buffer_list = receive_message(pipe32,pid,vector_time,buffer_list,color,socket,pid_list)
 
-def main():
+def play_animation():
+    animation = [
+    "   ___             _        _                    ",
+    "  |   \    ___    | |      (_)    _ _      ___   ",
+    "  | |) |  |___|   | |__    | |   | ' \    / -_)  ",
+    "  |___/   _____   |____|  _|_|_  |_||_|   \___|  ",
+    "_|\"\"\"\"\"|_|     |_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| ",
+    "\"`-0-0-'\"`-0-0-'\"`-0-0-'\"`-0-0-'\"`-0-0-'\"`-0-0-' ",
+    ]
+    print(bcolors.WARNING)
+    for i in range(len(animation)):
+        for j in range(len(animation[i])):
+            print(animation[i][j],end='')
+            time.sleep(0.005)
+        print('')
+    print(bcolors.ENDC)
+    print("Welcome to D-Line Application !!")
+    print("Before start please configure PORT for each process")
+
+def configure_port():
     port_list = [5001,5002,5003]
     for i in range(len(port_list)):
-        port_list[i] = int(input("Please Specify PORT for process#"+str(i+1)+": "))
-    
+        port_list[i] = int(input("PORT for process#"+str(i+1)+": "))
+    return port_list
+
+def initialize_message():
     type = 1
     msg_list = []
     ts = time.time()
@@ -126,16 +134,27 @@ def main():
         te = time.time()
         msg_list.append((type,message,sender,(te-ts)/2))
         ts = te
+    msg_list = [('text','text 1',1,0.5),('video','video 1',1,0.5),('image','image 1',1,0.5),('video','video 2',1,0.5),('text','text 2',1,0.5),('text','text 3',1,0.5)]
+    return msg_list
+
+def connect_socket(port):
+    sc = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sc.connect(('localhost',port))
+    return sc
+
+def main():
+    
+    play_animation()
+    port_list = configure_port()
+    msg_list = initialize_message()
 
     oneandtwo, twoandone = Pipe()
     twoandthree, threeandtwo = Pipe()
-    
-    socketp1 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    socketp1.connect(('localhost',port_list[0]))
-    socketp2 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    socketp2.connect(('localhost',port_list[1]))
-    socketp3 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    socketp3.connect(('localhost',port_list[2]))
+
+    socketp1 = connect_socket(port_list[0])
+    socketp2 = connect_socket(port_list[1])
+    socketp3 = connect_socket(port_list[2])
+
     pid_list = Array('i',[0,0,0])
     process1 = Process(target=process_one, 
                        args=(msg_list,oneandtwo,bcolors.OKBLUE,socketp1,pid_list))
@@ -143,6 +162,7 @@ def main():
                        args=(msg_list,twoandone, twoandthree,bcolors.OKCYAN,socketp2,pid_list))
     process3 = Process(target=process_three, 
                        args=(msg_list,threeandtwo,bcolors.OKGREEN,socketp3,pid_list))
+
     process1.start()
     process2.start()
     process3.start()
