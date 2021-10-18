@@ -14,7 +14,6 @@ class Process:
         self.pid = pid
         self.vector_time = {}
         self.buffer_list = []
-        self.lock_buffer = False
         self.address = {pid:self}
         self.pipe = pipe
         if pid == 1:
