@@ -119,8 +119,8 @@ def main():
             break
         message = input("Input Message Name: ")
         te = time.time()
-        ts = te
         msg_list.append((type,message,te-ts))
+        ts = te
 
     oneandtwo, twoandone = Pipe()
     twoandthree, threeandtwo = Pipe()
