@@ -48,10 +48,6 @@ class Process:
             if self.pid == 2 and target.pid == 1:
                 self.send_message_by_type(self.address[3],5,type,content)
         time.sleep(0.5)
-    def get_send_log(self,target,content,type):
-        return self.color + datetime.now().strftime("%H:%M:%S") + " | " + str(self.pid) + " send " + type + " message (" + content + ") to " + str(target.pid) + " (sequence time = " + str(self.vector_time[target.pid][self.pid]) + ")" + bcolors.ENDC + '\n'
-    def get_receive_log(self,message):
-        return self.color + datetime.now().strftime("%H:%M:%S") + " | " + str(self.pid) + " receive " + message['type'] + " message (" + message['content'] + ") from " + str(message['pid']) + " (sequence time = " + str(self.vector_time[message['pid']][message['pid']]) + ")" + bcolors.ENDC + '\n'
     def send_message_by_type(self,target,delay,type,content):
         self.vector_time[target.pid][self.pid] += 1
         log = self.get_send_log(target,content,type)
@@ -72,14 +68,13 @@ class Process:
             if i != message['pid']:
                 # Push message that cannot receive now in to buffer list (Check 2 of causal ordering)
                 if message['vector_time'][i] > vector_temp[i]:
-                    # print("PUT HERE 2",self.pid, self.buffer_list,message)
                     self.buffer_list.append(message)
                     return False
         self.vector_time[message['pid']] = vector_temp
         log = self.get_receive_log(message)
         print(log,end = '')
         self.pipe.send(log.encode())
-        # If process 2 then forward to process 3
+        # If it is process 2 then forward to process 3
         if self.pid == 2:
             self.send_message(self.address[3],message['type'],message['content'])
         # Check message in buffer list
@@ -91,6 +86,10 @@ class Process:
             if len(self.buffer_list) == 0:
                 break
             self.receive_message(self.buffer_list.pop(0))
+    def get_send_log(self,target,content,type):
+        return self.color + datetime.now().strftime("%H:%M:%S") + " | " + str(self.pid) + " send " + type + " message (" + content + ") to " + str(target.pid) + " (sequence time = " + str(self.vector_time[target.pid][self.pid]) + ")" + bcolors.ENDC + '\n'
+    def get_receive_log(self,message):
+        return self.color + datetime.now().strftime("%H:%M:%S") + " | " + str(self.pid) + " receive " + message['type'] + " message (" + message['content'] + ") from " + str(message['pid']) + " (sequence time = " + str(self.vector_time[message['pid']][message['pid']]) + ")" + bcolors.ENDC + '\n'
 def main():
     socketp1 = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     socketp1.connect(('localhost',5001))
