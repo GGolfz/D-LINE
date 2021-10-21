@@ -84,7 +84,7 @@ def process_two(msg_list,pipe21,pipe23,color,socket,pid_list):
     buffer_list = []
     for i in msg_list:
         if i[2] == 2:
-            vector_time = send_message(pipe21,pid,1,vector_time,i[0],i[1],color,socket,pid_list,i[3])
+            vector_time = send_message(pipe21,pid,1,vector_time,i[0],i[1],color,socket,pid_list,0) # No delay between sent to 1 and 3
             vector_time = send_message(pipe23,pid,3,vector_time,i[0],i[1],color,socket,pid_list,i[3])
         else:
             vector_time,buffer_list = receive_message(pipe21,pid,vector_time,buffer_list,color,socket,pid_list,True,pipe23)
