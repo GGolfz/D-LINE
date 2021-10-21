@@ -1,4 +1,4 @@
-# How to use concept.py
-1) Open n-th terminal
-2) Run each terminal with `nc -l port` which port is same as configure in concept.py
-3) Run `python3 concept.py`
+# How to use D-Line
+1) Open 4 terminals
+2) Run 3 terminals with `nc -l port` which port is [5001,5002,5003] in order.
+4) Run `python3 concept_multithread.py` in last terminal.
