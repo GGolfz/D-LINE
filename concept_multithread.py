@@ -124,16 +124,13 @@ def configure_port():
 def initialize_message():
     type = 1
     msg_list = []
-    ts = time.time()
     while(type != "0"):
         type = input("Choose Message Type (text,image,video) or 0 for end: ")
         if type == '0':
             break
         sender = int(input("Select sender 1 or 2: "))
         message = input("Input Message Name: ")
-        te = time.time()
-        msg_list.append((type,message,sender,(te-ts)/2))
-        ts = te
+        msg_list.append((type,message,sender,0.5))
     msg_list = [('text','text 1',1,0.5),('video','video 1',1,0.5),('image','image 1',1,0.5),('video','video 2',1,0.5),('text','text 2',1,0.5),('text','text 3',1,0.5)]
     return msg_list
 
