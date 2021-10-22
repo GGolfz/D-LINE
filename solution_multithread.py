@@ -131,7 +131,6 @@ def initialize_message():
         sender = int(input("Select sender 1 or 2: "))
         message = input("Input Message Name: ")
         msg_list.append((type,message,sender,0.5))
-    msg_list = [('text','text 1',1,0.5),('video','video 1',1,0.5),('image','image 1',1,0.5),('video','video 2',1,0.5),('text','text 2',1,0.5),('text','text 3',1,0.5)]
     return msg_list
 
 def connect_socket(port):
@@ -144,6 +143,7 @@ def main():
     play_animation()
     port_list = configure_port()
     msg_list = initialize_message()
+    print("")
 
     oneandtwo, twoandone = Pipe()
     twoandthree, threeandtwo = Pipe()

@@ -90,7 +90,7 @@ Then we change from use object to use process for representing the people. We br
 2) Run 1st terminal using `nc -l 5001`
 3) Run 2nd terminal using `nc -l 5002`
 4) Run 3rd terminal using `nc -l 5003`
-5) Run `python3 concept_multithread.py` in the last terminal.
+5) Run `python3 concept_multithread.py` in the last terminal or `python3 concept_multithread.py < testcase-n.in` (n is from 1 to 5) if you want to use a predefined test case.
 6) Configure port of process#1 to be `5001`
 7) Configure port of process#2 to be `5002`
 8) Configure port of process#3 to be `5003`
