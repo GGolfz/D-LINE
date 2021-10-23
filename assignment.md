@@ -62,19 +62,33 @@ P2 will have vector_time and a buffer list of communication with P1, and vector_
 
 P3 will have vector_time and a buffer list of communication with P2.
 
-We start implementation by using objects for representing the people as you can see in `solution.py`. In this file, `Process` class has buffer_list as `List` to store the message that buffered and vector_time as `Dict` that we decide to make it 2D Dict first dimension is the target group and the second dimension is vector_time in each group. There are four significant methods of `Process` object are `send_message`, `send_message_by_type`, `receive_message`, `check_buffer_list`.
+We start implementation by using objects for representing the people as you can see in `solution.py`. In this file, `Process` class has buffer_list as `List` to store the message that buffered and vector_time as `Dict` that we decide to make it 2D Dict first dimension is the target group and the second dimension is vector_time in each group. There are four significant methods of `Process` object are `send_message`, `send_message_by_type`, `receive_message`, and `check_buffer_list`.
 
 1) `send_message` is the method that we create for setting the delay of each type of message and we also check that if the sender is P2 it also send to P3.
 
 2) `send_message_by_type` is the method that we implement same as the causal ordering concept that we add the vector time of the sender by 1 and send the message to other people.
 
-3) `receive_message` is the method that we implement same as the causal ordering concept that when we receive the message we need to check two conditions. First is vector time of sender from incoming message must equal our vector time of sender that we plus 1. Second is other vector time of receiver must more than or equal the vector time of sender. Otherwise, the message will be buffered and stored in a buffer list.
+3) `receive_message` is the method that we implement same as the causal ordering concept that when we receive the message we need to check two conditions. First is vector time of sender from incoming message must equal our vector time of sender that we plus 1. Second is other vector time of receiver must more than or equal the vector time of sender. Otherwise, the message will be buffered and stored in a buffer list. We also check that if the receiver is P2 it also send to P3 and we also check messages in the buffer list.
 
 4) `check_buffer_list` is the method that we use for checking that we can receive the message in the buffer list or not that we will call when receiving message success.
 
-The code is run in sequence in a single process, works as our expectation, and sent the output to show in another 3 terminal using `socket` and `netcat`. 
+The code is run in sequence in a single process, works as our expectation, and sent the output to show in another 3 terminals using `socket` and `netcat`. 
 
-Then we change from use object to use process for representing the people. We bring `multiprocessing` library in our project for implementation. The code is in `solution_multithread.py`. The code is similar to before, it just changes the method name and refactors to be implemented in multi-process. Now the flow of our solution is changed since when wait to receive a message from another process the process cannot send the message or do anything else. But we think it is acceptable since in the real world when we communicate with people if we talk about the same topic we need to know the message of other people before we reply. 
+Then we change from use object to use process for representing the people. We bring `multiprocessing` library in our project for implementation. The code is in `solution_multithread.py`. The code is similar to before, it just changes the method name and refactors to be implemented in multi-process. 
+
+As I mentioned before, in `multiprocessing` we use `Process` to simulate a user, `Pipe` as the communication way between people, and `Array` for store shared state.
+
+In `solution_multithread.py`, there are four significant methods are `send_message`, `receive_message`, `handle_receive_message`, and `handle_buffer_message`. 
+
+1) `send_message` is the method that we use for sending the messages which have different delivery times depending on the type of message to `Pipe` which is a communication way between two processes (two users).
+
+2) `receive_message` is the method that we use for receiving the messages from `Pipe` and passing it to `handle_receive_message`.
+
+3) `handle_receive_message` is the method that we use for handling the message that we can receive or we need to put it into the buffer list. We check two conditions of causal ordering, first is the vector time of sender from incoming message must equal our vector time of sender that we plus 1. Second is other vector time of receiver must more than or equal the vector time of sender. Otherwise, the message will be buffered and stored in a buffer list. After that, we check whether the process is process2 or not because we need to forward the message to process3. Then we call `handle_buffer_message` method.
+
+4) `handle_buffer_message` is the method that we use for checking that we can receive the message in the buffer list or not by passing the message in the buffer list into `handle_receive_message`.
+
+We also sent the output to show in another 3 terminals using `socket` and `netcat`. But the flow of our solution is changed since when wait to receive a message from another process the process cannot send the message or do anything else. But we think it is acceptable since in the real world when we communicate with people if we talk about the same topic we need to know the message of other people before we reply. 
 
 ### Testcase
 
